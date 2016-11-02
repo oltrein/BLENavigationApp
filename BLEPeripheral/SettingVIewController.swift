@@ -9,7 +9,7 @@
 import UIKit
 import CoreBluetooth
 
-class SettingVIewController: UIViewController, CBCentralManagerDelegate, UITableViewDelegate, UITableViewDataSource {
+class SettingVIewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, UITableViewDelegate, UITableViewDataSource {
     fileprivate let tableView = UITableView()
     fileprivate let protectView = UIView()
     fileprivate let indicator = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
@@ -33,14 +33,14 @@ private extension SettingVIewController {
     func configureTableView(){
         tableView.delegate = self
         tableView.dataSource = self
-        
-        tableView.frame = view.frame
-        view = tableView
     }
     
     func configureAppearance() {
         let refreshBtn = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(self.refresh))
         self.navigationItem.rightBarButtonItem = refreshBtn
+        
+        tableView.frame = view.frame
+        view = tableView
         
         protectView.frame = view.frame
         protectView.alpha = 0.6
@@ -119,23 +119,90 @@ internal extension SettingVIewController {
     
     // if peripheral's name is not "raspberrypi", the peripheral will not be inserted.
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        guard let name = peripheral.name, name != "raspberry" else { return }
+        guard let name = peripheral.name, name == "raspberrypi" else { return }
             
         print("discovered peripheral")
         peripherals.insert(peripheral)
     
     }
+    
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        print("connection success")
+        
+        peripheral.delegate = self
+        peripheral.discoverServices(nil)
+    }
+    
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        print("connection failed")
+    }
 }
 
 // MARK: - CBPeripheralDelegate
 internal extension SettingVIewController {
-
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        if error != nil {
+            print("failed to discover services")
+            print("disconnect with peripheral")
+            centralManager.cancelPeripheralConnection(peripheral)
+        }
+        
+        guard let services = peripheral.services else {
+            print("This peripheral does not have any services")
+            print("disconnect with peripheral")
+            centralManager.cancelPeripheralConnection(peripheral)
+            return
+        }
+        
+        for service in services {
+            peripheral.discoverCharacteristics(nil, for: service)
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        if error != nil {
+            print("failed to discover characteristics")
+            print("disconnect with peripheral")
+            centralManager.cancelPeripheralConnection(peripheral)
+        }
+        
+        guard let characteristics = service.characteristics else {
+            print("This service does not have any characteristics")
+            print("disconnect with peripheral")
+            centralManager.cancelPeripheralConnection(peripheral)
+            return
+        }
+        
+        for characteristic in characteristics {
+            print("writting value to characteristic")
+            
+            let str = "some data"
+            let data = str.data(using: .utf8)!
+            peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        if error != nil {
+            print("failed to write data")
+        }else{
+            print("success to write data")
+        }
+        
+        print("disconnect with peripheral")
+        centralManager.cancelPeripheralConnection(peripheral)
+    }
 }
 
 // MARK: - UITableViewDelegate
 internal extension SettingVIewController {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("")
+        let peripheral = peripheralsAry[indexPath.row]
+        
+        print("connecting \(peripheral.name!)")
+        centralManager.connect(peripheral, options: nil)
+        
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
 }
@@ -152,16 +219,10 @@ internal extension SettingVIewController {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        guard let label = cell.textLabel else {
-            print("error: cell.textLabel is null")
+        guard let label = cell.textLabel, let name = peripheralsAry[indexPath.row].name else {
             return UITableViewCell()
         }
         
-        guard let name = peripheralsAry[indexPath.row].name else {
-            print("peripheral name is null")
-            return UITableViewCell()
-        }
-    
         label.text = String(name)
         
         return cell
