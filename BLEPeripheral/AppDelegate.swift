@@ -30,12 +30,13 @@ private extension AppDelegate {
         navigationViewCon.view.backgroundColor = .white
         navigationViewCon.title = "Navigation"
         
-        let settingViewCon = UIViewController()
+        let settingViewCon = SettingVIewController()
         settingViewCon.view.backgroundColor = .white
-        settingViewCon.title = "Sttring"
+        settingViewCon.title = "Setting"
+        let settingNavViewCon = UINavigationController(rootViewController: settingViewCon)
         
         let tabBarController = UITabBarController()
-        tabBarController.setViewControllers([navigationViewCon, settingViewCon], animated: true)
+        tabBarController.setViewControllers([navigationViewCon, settingNavViewCon], animated: true)
         
         window?.rootViewController = tabBarController
     }
