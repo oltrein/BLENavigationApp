@@ -26,7 +26,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 private extension AppDelegate {
     func configureWindow(){
         
-        let navigationViewCon = UIViewController()
+        let navigationViewCon = NavigationViewController()
         navigationViewCon.view.backgroundColor = .white
         navigationViewCon.title = "Navigation"
         
