@@ -33,14 +33,14 @@ private extension SettingVIewController {
     func configureTableView(){
         tableView.delegate = self
         tableView.dataSource = self
-        
-        tableView.frame = view.frame
-        view = tableView
     }
     
     func configureAppearance() {
         let refreshBtn = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(self.refresh))
         self.navigationItem.rightBarButtonItem = refreshBtn
+        
+        tableView.frame = view.frame
+        view = tableView
         
         protectView.frame = view.frame
         protectView.alpha = 0.6
@@ -119,7 +119,7 @@ internal extension SettingVIewController {
     
     // if peripheral's name is not "raspberrypi", the peripheral will not be inserted.
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        guard let name = peripheral.name, name != "raspberry" else { return }
+        guard let name = peripheral.name, name == "raspberrypi" else { return }
             
         print("discovered peripheral")
         peripherals.insert(peripheral)
@@ -152,16 +152,10 @@ internal extension SettingVIewController {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        guard let label = cell.textLabel else {
-            print("error: cell.textLabel is null")
+        guard let label = cell.textLabel, let name = peripheralsAry[indexPath.row].name else {
             return UITableViewCell()
         }
         
-        guard let name = peripheralsAry[indexPath.row].name else {
-            print("peripheral name is null")
-            return UITableViewCell()
-        }
-    
         label.text = String(name)
         
         return cell
